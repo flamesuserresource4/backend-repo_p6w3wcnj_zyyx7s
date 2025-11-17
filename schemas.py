@@ -1,48 +1,106 @@
 """
-Database Schemas
+Database Schemas for Flames.blue
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a MongoDB collection. The collection name is the lowercase of the class name.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from typing import List, Optional, Literal
+from pydantic import BaseModel, Field, EmailStr
+from datetime import date, datetime
 
-# Example schemas (replace with your own):
+# Core users
+class Candidate(BaseModel):
+    full_name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    password_hash: Optional[str] = None
 
-class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    # Onboarding fields
+    location_country: Optional[str] = None
+    location_city: Optional[str] = None
+    relocate_countries: List[str] = Field(default_factory=list)
+    job_types: List[Literal["Permanent","Part-time","Per diem","Live-in"]] = Field(default_factory=list)
+    search_status: Optional[Literal["Just started","Interviewing","Not actively looking"]] = None
+    start_date_option: Optional[Literal["Immediately","Few weeks","Few months","Specific date"]] = None
+    start_date_specific: Optional[date] = None
+    experience_years: Optional[float] = None
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+    graduate: Optional[bool] = None
+    graduation_date: Optional[date] = None
+    school: Optional[str] = None
+    degree: Optional[str] = None
+    major: Optional[str] = None
+    gpa: Optional[str] = None
 
-# Add your own schemas here:
-# --------------------------------------------------
+    specialties: List[str] = Field(default_factory=list)
+    resume_url: Optional[str] = None
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+    # Eligibility & Compliance (Saudi-specific)
+    visa_status: Optional[str] = None
+    residency: Optional[str] = None
+    licensing: Optional[str] = None
+    biometric_certificate: Optional[bool] = None
+
+    # System
+    role: Literal["candidate"] = "candidate"
+    fit_score: Optional[int] = Field(default=None, ge=0, le=100)
+    compliance_flags: List[str] = Field(default_factory=list)
+
+class Recruiter(BaseModel):
+    company_name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    password_hash: Optional[str] = None
+    role: Literal["recruiter"] = "recruiter"
+
+class Admin(BaseModel):
+    email: EmailStr
+    password_hash: str
+    role: Literal["admin"] = "admin"
+
+# Jobs & Applications
+class Job(BaseModel):
+    title: str
+    location_country: str
+    location_city: Optional[str] = None
+    employment_type: Literal["Permanent","Part-time","Per diem","Live-in"]
+    description: Optional[str] = None
+    specialties: List[str] = Field(default_factory=list)
+    recruiter_id: Optional[str] = None
+    status: Literal["open","closed"] = "open"
+
+class Application(BaseModel):
+    candidate_id: str
+    job_id: str
+    status: Literal["applied","shortlisted","offered","hired","rejected"] = "applied"
+    fit_score: Optional[int] = Field(default=None, ge=0, le=100)
+
+class Swipe(BaseModel):
+    candidate_id: str
+    job_id: str
+    direction: Literal["right","left"]
+
+# Contracts & Payments
+class Contract(BaseModel):
+    job_id: str
+    candidate_id: str
+    recruiter_id: str
+    terms: Optional[str] = None
+    candidate_signed_at: Optional[datetime] = None
+    recruiter_signed_at: Optional[datetime] = None
+    status: Literal["draft","candidate_signed","fully_signed"] = "draft"
+
+class Payment(BaseModel):
+    recruiter_id: str
+    contract_id: str
+    amount: float
+    currency: str = "USD"
+    status: Literal["pending","paid","failed","refunded"] = "pending"
+
+# Messaging
+class Message(BaseModel):
+    sender_id: str
+    receiver_id: str
+    body: str
+    read: bool = False
+
